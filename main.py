@@ -1,9 +1,7 @@
 import math
-
-from music21 import converter, stream, note, chord, meter, tempo, key, instrument
+from music21 import converter, stream, note, chord, meter, tempo, key, instrument, scale
 import random
 import numpy as np
-
 
 def load_midi(file_path):
     # file_path = "Themes/Twinkle-Little-Star (Long Version).mid"
@@ -138,43 +136,39 @@ def duration_mutation(individual):
             individual[note_idx][3] *= 2
     return individual
 
+def get_harmonic_notes(note_value, scale_type):
+    if scale_type == 'major':
+        note_harmonic_degree = [i.midi for i in scale.MajorScale(note.Note(note_value).nameWithOctave).pitches]
+    elif scale_type == 'minor':
+        note_harmonic_degree = [i.midi for i in scale.MajorScale(note.Note(note_value).nameWithOctave).pitches]
+    else:
+        note_harmonic_degree = [i.midi for i in scale.DiatonicScale(note.Note(note_value).nameWithOctave).pitches]
+    one_octave_lower = [i-12 for i in note_harmonic_degree]
+    harmonic_notes = one_octave_lower + note_harmonic_degree
+    return harmonic_notes
 
 # Pitch Mutation: A note out of harmony will be selected and changed to
 # one of a harmony degree based on the previous note.
-def pitch_mutation(individual):
+def pitch_mutation(individual, scale_type):
     note_idx = random.randint(1, len(individual) - 2)
     prev_note_idx = note_idx - 1
     previous_note = individual[prev_note_idx][0]
-    chord_notes_previous_bar = [previous_note, previous_note - 7,
-                                previous_note + 7]
-    individual[note_idx][0] = min(random.choice(chord_notes_previous_bar), 127)
+    harmonic_notes = get_harmonic_notes(previous_note, scale_type)
+    individual[note_idx][0] = random.choice(harmonic_notes)
     return individual
 
 
 # Define mutation operator (for example, random note change)
-def mutate(individual, mutation_rate):
+def mutate(individual, mutation_rate, scale_type):
     for i in range(len(individual)):
         if np.random.rand() < mutation_rate:
             # Apply custom mutation (random note change, etc.)
             if np.random.rand() < 0.5:
-                individual = pitch_mutation(individual)
+                individual = pitch_mutation(individual, scale_type)
                 # individual[i][0] = np.random.randint(0, 128)  # MIDI note range
             else:
                 individual = duration_mutation(individual)
     return individual
-
-
-# Define fitness function (example: harmonic, similarity, rhythmic diversity)
-def calculate_fitness(individual, original_melody):
-    # Calculate fitness based on harmony, similarity, rhythmic diversity
-    similarity = melody_similarity(individual, original_melody)
-    complexity = tempo_complexity(individual)
-    print()
-    print('similairty:', similarity)
-    print('complexity:', complexity)
-
-    fitness = 1  # Calculate the fitness score
-    return fitness
 
 
 def chop_into_bars(melody):
@@ -243,26 +237,40 @@ def metricity(notes):
     return metricity
 
 
+# Define fitness function (example: harmonic, similarity, rhythmic diversity)
+def calculate_fitness(individual, original_melody, hyperparameters):
+    # Calculate fitness based on harmony, similarity, rhythmic diversity
+    similarity = melody_similarity(individual, original_melody)
+    complexity = tempo_complexity(individual)
+    # print('similairty:', similarity)
+    # print('complexity:', complexity)
+    # Calculate the fitness score
+    fitness = hyperparameters['w_similarity'] * similarity + hyperparameters['w_tempo'] * complexity
+    return fitness
+
+
 # Main genetic algorithm function
-def genetic_algorithm(original_melody, population_size, generations, crossover_rate, mutation_rate):
+def genetic_algorithm(original_melody, population_size, generations, crossover_rate, mutation_rate, scale_type, hyperparameters):
     population = initialize_population(original_melody, population_size)
     for generation in range(generations):
         # Evaluate fitness for each individual in the population
-        fitness_scores = [calculate_fitness(individual, original_melody) for individual in population]
+        fitness_scores = [calculate_fitness(individual, original_melody, hyperparameters) for individual in population]
         # Select parents based on fitness scores (for simplicity, using roulette wheel selection)
         choice_indices = np.random.choice(len(population), size=2, p=np.array(fitness_scores) / np.sum(fitness_scores))
         parents = [population[i] for i in choice_indices]
         # Apply crossover
         child1, child2 = crossover(parents[0], parents[1], crossover_rate)
         # Apply mutation
-        child1 = mutate(child1, mutation_rate)
-        child2 = mutate(child2, mutation_rate)
+        child1 = mutate(child1, mutation_rate, scale_type)
+        child2 = mutate(child2, mutation_rate, scale_type)
         # Replace individuals in the population with the new offspring
         population[fitness_scores.index(min(fitness_scores))] = child1
         population[fitness_scores.index(min(fitness_scores))] = child2
     # Return the best individual after all generations
-    best_individual = min(population, key=lambda x: calculate_fitness(x, original_melody))
-    return best_individual
+    # best_individual = max(population, key=lambda x: calculate_fitness(x, original_melody, hyperparameters))
+    best_individuals = sorted(population, key=lambda x: calculate_fitness(x, original_melody, hyperparameters), reverse=True)[0:10]
+    return best_individuals
+
 
 # Example usage
 if __name__ == "__main__":
@@ -270,18 +278,22 @@ if __name__ == "__main__":
     original_melody = load_midi("Themes/twinkle-twinkle-little-star.mid")
     
     # Set genetic algorithm parameters
+    hyperparameters = {'w_similarity': 1, 'w_tempo': 0}
     population_size = 100
-    generations = 20 #600
+    generations = 50 #600
     crossover_rate = 0.5
     mutation_rate = 0.05
+    scale_type = "major"
 
     # Initialize population
     population = initialize_population(original_melody, population_size)
-    print("Initial Population:")
-    print(population[0:2])
+    # print("Initial Population:")
+    # print(population[0:2])
 
     # Run the genetic algorithm
-    best_variation = genetic_algorithm(original_melody, population_size, generations, crossover_rate, mutation_rate)
-    print(best_variation)
-    create_midi_file(best_variation, "output/variation.mid", bpm=120)
+    best_variations = genetic_algorithm(original_melody, population_size, generations, 
+                                       crossover_rate, mutation_rate, scale_type, hyperparameters)
+    # print(best_variation)
+    for i in range(len(best_variations)):
+        create_midi_file(best_variations[i], f"output/variation_{i}.mid", bpm=120)
     
