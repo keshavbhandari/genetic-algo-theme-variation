@@ -186,8 +186,8 @@ def chop_into_bars(melody):
 def melody_similarity(melody_a, melody_b):
     melody_a = chop_into_bars(melody_a)
     melody_b = chop_into_bars(melody_b)
-    assert len(melody_a) == len(melody_b), 'Two melodies should have the same length'
-    ce_differences = [central_effect(bar) - central_effect(melody_b[i]) for i, bar in enumerate(melody_a)]
+    n_bars = min(len(melody_a), len(melody_b))
+    ce_differences = [central_effect(melody_a[i]) - central_effect(melody_b[i]) for i in range(n_bars)]
     ce_distances = [np.sum(np.square(diff)) for diff in ce_differences]
     score = 100 - np.average(ce_distances)
     return score
