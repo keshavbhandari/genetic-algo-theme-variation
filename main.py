@@ -264,8 +264,10 @@ def genetic_algorithm(original_melody, population_size, generations, crossover_r
         child1 = mutate(child1, mutation_rate, scale_type)
         child2 = mutate(child2, mutation_rate, scale_type)
         # Replace individuals in the population with the new offspring
-        population[fitness_scores.index(min(fitness_scores))] = child1
-        population[fitness_scores.index(min(fitness_scores))] = child2
+        min_fitness_index = fitness_scores.index(sorted(fitness_scores)[0])
+        second_min_fitness_index = fitness_scores.index(sorted(fitness_scores)[1])
+        population[min_fitness_index] = child1
+        population[second_min_fitness_index] = child2
     # Return the best individual after all generations
     # best_individual = max(population, key=lambda x: calculate_fitness(x, original_melody, hyperparameters))
     best_individuals = sorted(population, key=lambda x: calculate_fitness(x, original_melody, hyperparameters), reverse=True)[0:10]
