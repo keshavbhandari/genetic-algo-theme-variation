@@ -163,8 +163,13 @@ def mutate(individual, mutation_rate, scale_type):
     for i in range(len(individual)):
         if np.random.rand() < mutation_rate:
             # Apply custom mutation (random note change, etc.)
-            if np.random.rand() < 0.5:
-                individual = pitch_mutation(individual, scale_type)
+            if np.random.rand() < 0.9:
+                # Add note sequence by extending a random note
+                note_idx = random.randint(0, len(individual) - 1)
+                if individual[note_idx][3]>=1:
+                    individual[note_idx:note_idx + 1] = add_note_sequence(individual[note_idx])
+            # elif np.random.rand() < 0.9:
+                # individual = pitch_mutation(individual, scale_type)
                 # individual[i][0] = np.random.randint(0, 128)  # MIDI note range
             else:
                 individual = duration_mutation(individual)
@@ -237,15 +242,34 @@ def metricity(notes):
     return metricity
 
 
+def harmony(melody):
+    harmonyScore = 0
+    harmonic_interval_rules = {0: 3, 2: 3, 4: 3, 5: 3, 7: 3}
+    for j, note_value in enumerate(melody):
+        if j != 0:
+            prev_note = melody[j-1][0]
+            current_note = melody[j][0]
+            # Calculate how many semitones away this note is from the previous one
+            noteDifference = abs(current_note - prev_note)
+            if noteDifference in harmonic_interval_rules.keys():
+                harmonyScore += noteDifference
+            if noteDifference > 7:
+                harmonyScore -= 8
+    return harmonyScore
+            
+
+
 # Define fitness function (example: harmonic, similarity, rhythmic diversity)
 def calculate_fitness(individual, original_melody, hyperparameters):
     # Calculate fitness based on harmony, similarity, rhythmic diversity
     similarity = melody_similarity(individual, original_melody)
-    complexity = tempo_complexity(individual)
+    # complexity = tempo_complexity(individual)
     # print('similairty:', similarity)
     # print('complexity:', complexity)
     # Calculate the fitness score
-    fitness = hyperparameters['w_similarity'] * similarity + hyperparameters['w_tempo'] * complexity
+    # fitness = hyperparameters['w_similarity'] * similarity + hyperparameters['w_tempo'] * complexity
+    harmony_score = harmony(individual)
+    fitness = harmony_score
     return fitness
 
 
@@ -264,8 +288,11 @@ def genetic_algorithm(original_melody, population_size, generations, crossover_r
         child1 = mutate(child1, mutation_rate, scale_type)
         child2 = mutate(child2, mutation_rate, scale_type)
         # Replace individuals in the population with the new offspring
-        population[fitness_scores.index(min(fitness_scores))] = child1
-        population[fitness_scores.index(min(fitness_scores))] = child2
+        # Replace individuals in the population with the new offspring
+        min_fitness_index = fitness_scores.index(sorted(fitness_scores)[0])
+        second_min_fitness_index = fitness_scores.index(sorted(fitness_scores)[1])
+        population[min_fitness_index] = child1
+        population[second_min_fitness_index] = child2
     # Return the best individual after all generations
     # best_individual = max(population, key=lambda x: calculate_fitness(x, original_melody, hyperparameters))
     best_individuals = sorted(population, key=lambda x: calculate_fitness(x, original_melody, hyperparameters), reverse=True)[0:10]
@@ -278,17 +305,17 @@ if __name__ == "__main__":
     original_melody = load_midi("Themes/twinkle-twinkle-little-star.mid")
     
     # Set genetic algorithm parameters
-    hyperparameters = {'w_similarity': 1, 'w_tempo': 0}
+    hyperparameters = {'w_similarity': 0.5, 'w_tempo': 0.5}
     population_size = 100
-    generations = 50 #600
+    generations = 50# 600
     crossover_rate = 0.5
-    mutation_rate = 0.05
+    mutation_rate = 0.15
     scale_type = "major"
 
     # Initialize population
     population = initialize_population(original_melody, population_size)
     # print("Initial Population:")
-    # print(population[0:2])
+    print(population[0:2])
 
     # Run the genetic algorithm
     best_variations = genetic_algorithm(original_melody, population_size, generations, 
