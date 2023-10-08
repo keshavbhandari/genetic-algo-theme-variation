@@ -55,6 +55,16 @@ def create_midi_file(melody, output_file_path, bpm=120):
     print(f"Melody saved to {output_file_path}")
 
 
+def swap_notes(melody):
+    # Chop melody into bars
+    bars = chop_into_bars(melody)
+    # Randomly choose an indices within a bar
+    bar_idx = random.sample(range(len(bars)), 1)[0]
+    idx1, idx2 = random.sample(range(len(bars[bar_idx])), 2)
+    melody[bar_idx+idx1][0], melody[bar_idx+idx2][0] = melody[bar_idx+idx2][0], melody[bar_idx+idx1][0]
+    return melody
+
+
 def split_note(note_value, n_splits=2):
     # Split note into n notes with half duration
     splits = []
@@ -64,16 +74,6 @@ def split_note(note_value, n_splits=2):
                 note_value[4]]
         splits.append(note)
     return splits
-
-
-def swap_notes(melody):
-    # Chop melody into bars
-    bars = chop_into_bars(melody)
-    # Randomly choose an indices within a bar
-    bar_idx = random.sample(range(len(bars)), 1)[0]
-    idx1, idx2 = random.sample(range(len(bars[bar_idx])), 2)
-    melody[bar_idx+idx1][0], melody[bar_idx+idx2][0] = melody[bar_idx+idx2][0], melody[bar_idx+idx1][0]
-    return melody
 
 
 def add_note_sequence(note_value):
@@ -125,24 +125,27 @@ def crossover(parent1, parent2, crossover_rate):
 
 # Define duration mutation: A note is randomly selected and its duration is
 # either doubled or reduced to half
-def duration_mutation(individual):
+def duration_mutation(melody):
+    individual = melody.copy()
     note_idx = random.randint(0, len(individual) - 1)
     if individual[note_idx][3] > 1:
         individual[note_idx][3] /= 2
     elif individual[note_idx][3] < 1:
-        individual[note_idx][3] *= 2
+        if not individual[note_idx][2] + individual[note_idx][3] >= 4:
+            individual[note_idx][3] *= 2
     else:
         if np.random.rand() < 0.5:
             individual[note_idx][3] /= 2
         else:
-            individual[note_idx][3] *= 2
+            if not individual[note_idx][2] + individual[note_idx][3] >= 4:
+                individual[note_idx][3] *= 2
     return individual
 
 def get_harmonic_notes(note_value, scale_type):
     if scale_type == 'major':
         note_harmonic_degree = [i.midi for i in scale.MajorScale(note.Note(note_value).nameWithOctave).pitches]
     elif scale_type == 'minor':
-        note_harmonic_degree = [i.midi for i in scale.MajorScale(note.Note(note_value).nameWithOctave).pitches]
+        note_harmonic_degree = [i.midi for i in scale.MinorScale(note.Note(note_value).nameWithOctave).pitches]
     else:
         note_harmonic_degree = [i.midi for i in scale.DiatonicScale(note.Note(note_value).nameWithOctave).pitches]
     one_octave_lower = [i-12 for i in note_harmonic_degree]
@@ -265,13 +268,13 @@ def harmony(melody):
 def calculate_fitness(individual, original_melody, hyperparameters):
     # Calculate fitness based on harmony, similarity, rhythmic diversity
     similarity = melody_similarity(individual, original_melody)
-    # complexity = tempo_complexity(individual)
+    complexity = tempo_complexity(individual)
     # print('similairty:', similarity)
     # print('complexity:', complexity)
     # Calculate the fitness score
     # fitness = hyperparameters['w_similarity'] * similarity + hyperparameters['w_tempo'] * complexity
     harmony_score = harmony(individual)
-    fitness = harmony_score
+    fitness = harmony_score + complexity
     return fitness
 
 def NormalizeData(data):
