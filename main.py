@@ -177,13 +177,13 @@ def chop_into_bars(melody):
     return chop_into
 
 
-def melody_similarity(melody_a, melody_b):
+def melody_similarity(melody_a, melody_b, weight=1):
     melody_a = chop_into_bars(melody_a)
     melody_b = chop_into_bars(melody_b)
     n_bars = min(len(melody_a), len(melody_b))
     ce_differences = [central_effect(melody_a[i]) - central_effect(melody_b[i]) for i in range(n_bars)]
     ce_distances = [np.sum(np.square(diff)) for diff in ce_differences]
-    score = 100 - np.average(ce_distances)
+    score = 100 - np.average(ce_distances) * weight
     return score
 
 
@@ -198,7 +198,8 @@ def central_effect(notes):
 def note_coordinate(note, h=math.sqrt(1 / 6)):
     pitch_class_to_k = [0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5]
     pitch_class = note[0] % 12
-    k = pitch_class_to_k[pitch_class]
+    octave = int(note[0] / 12)
+    k = pitch_class_to_k[pitch_class] + 12 * octave
     t = k * math.pi / 2
     x = math.sin(t)
     y = math.cos(t)
@@ -206,7 +207,7 @@ def note_coordinate(note, h=math.sqrt(1 / 6)):
     return [x, y, z]
 
 
-def tempo_complexity(melody):
+def tempo_complexity(melody, weight=1):
     max_metricity = [5,
                      5 + 4,
                      5 + 4 + 3,
@@ -226,7 +227,7 @@ def tempo_complexity(melody):
                      ]
     melody = chop_into_bars(melody)
     complexity = [max_metricity[len(bar)-1] - metricity(bar) for bar in melody]
-    score = sum(complexity) / len(complexity)
+    score = sum(complexity) / len(complexity) * weight
     return score
 
 
@@ -240,12 +241,11 @@ def metricity(notes):
 # Define fitness function (example: harmonic, similarity, rhythmic diversity)
 def calculate_fitness(individual, original_melody, hyperparameters):
     # Calculate fitness based on harmony, similarity, rhythmic diversity
-    similarity = melody_similarity(individual, original_melody)
-    complexity = tempo_complexity(individual)
-    # print('similairty:', similarity)
-    # print('complexity:', complexity)
+    similarity = melody_similarity(individual, original_melody, hyperparameters['w_similarity'])
+    complexity = tempo_complexity(individual, hyperparameters['w_tempo'])
+    # print(similarity, complexity)
     # Calculate the fitness score
-    fitness = hyperparameters['w_similarity'] * similarity + hyperparameters['w_tempo'] * complexity
+    fitness = similarity + complexity
     return fitness
 
 
@@ -257,6 +257,9 @@ def genetic_algorithm(original_melody, population_size, generations, crossover_r
         fitness_scores = [calculate_fitness(individual, original_melody, hyperparameters) for individual in population]
         # Select parents based on fitness scores (for simplicity, using roulette wheel selection)
         choice_indices = np.random.choice(len(population), size=2, p=np.array(fitness_scores) / np.sum(fitness_scores))
+        # top_2_scores = sorted(fitness_scores)[-2:]
+        # print(top_2_scores)
+        # choice_indices = [fitness_scores.index(s) for s in top_2_scores]
         parents = [population[i] for i in choice_indices]
         # Apply crossover
         child1, child2 = crossover(parents[0], parents[1], crossover_rate)
