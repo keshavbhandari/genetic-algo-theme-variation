@@ -141,6 +141,7 @@ def duration_mutation(melody):
                 individual[note_idx][3] *= 2
     return individual
 
+
 def get_harmonic_notes(note_value, scale_type):
     if scale_type == 'major':
         note_harmonic_degree = [i.midi for i in scale.MajorScale(note.Note(note_value).nameWithOctave).pitches]
@@ -151,6 +152,7 @@ def get_harmonic_notes(note_value, scale_type):
     one_octave_lower = [i-12 for i in note_harmonic_degree]
     harmonic_notes = one_octave_lower + note_harmonic_degree
     return harmonic_notes
+
 
 # Pitch Mutation: A note out of harmony will be selected and changed to
 # one of a harmony degree based on the previous note.
@@ -241,6 +243,10 @@ def tempo_complexity(melody):
 
 
 def metricity(notes):
+    for bar in notes:
+        if bar[2] > 4:
+            print(notes)
+            1/0
     weights = [5, 1, 2, 1, 3, 1, 2, 1, 4, 1, 2, 1, 3, 1, 2, 1]
     positions = [int(n[2] * 4) for n in notes]
     metricity = sum([weights[p] for p in positions])
@@ -268,13 +274,11 @@ def harmony(melody):
 def calculate_fitness(individual, original_melody, hyperparameters):
     # Calculate fitness based on harmony, similarity, rhythmic diversity
     similarity = melody_similarity(individual, original_melody)
-    complexity = tempo_complexity(individual)
-    # print('similairty:', similarity)
-    # print('complexity:', complexity)
-    # Calculate the fitness score
-    # fitness = hyperparameters['w_similarity'] * similarity + hyperparameters['w_tempo'] * complexity
+    complexity = tempo_complexity(individual) * 100
     harmony_score = harmony(individual)
-    fitness = harmony_score + complexity
+    # print('similairty:', similarity)
+    # Calculate the fitness score
+    fitness = hyperparameters['w_harmony'] * harmony_score + hyperparameters['w_similarity'] * similarity + hyperparameters['w_tempo'] * complexity
     return fitness
 
 def NormalizeData(data):
@@ -316,9 +320,9 @@ if __name__ == "__main__":
     original_melody = load_midi("Themes/twinkle-twinkle-little-star.mid")
     
     # Set genetic algorithm parameters
-    hyperparameters = {'w_similarity': 0.5, 'w_tempo': 0.5}
+    hyperparameters = {'w_harmony': 0.3, 'w_similarity': 0.2, 'w_tempo': 0.5}
     population_size = 100
-    generations = 50 #600
+    generations = 600
     crossover_rate = 0.5
     mutation_rate = 0.05
     scale_type = "major"
