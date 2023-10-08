@@ -67,9 +67,12 @@ def split_note(note_value, n_splits=2):
 
 
 def swap_notes(melody):
-    # Randomly choose two indices and swap the notes
-    idx1, idx2 = random.sample(range(len(melody)), 2)
-    melody[idx1][0], melody[idx2][0] = melody[idx2][0], melody[idx1][0]
+    # Chop melody into bars
+    bars = chop_into_bars(melody)
+    # Randomly choose an indices within a bar
+    bar_idx = random.sample(range(len(bars)), 1)[0]
+    idx1, idx2 = random.sample(range(len(bars[bar_idx])), 2)
+    melody[bar_idx+idx1][0], melody[bar_idx+idx2][0] = melody[bar_idx+idx2][0], melody[bar_idx+idx1][0]
     return melody
 
 
@@ -89,7 +92,6 @@ def initialize_population(melody, population_size):
         # measure_indices = [i for i, x in enumerate(variation) if isinstance(x, stream.Measure)]
         # Apply random modification (split note, swap notes, add note sequence)
         modification_type = random.choice(['split', 'swap', 'add'])
-        modification_type = 'add'
         if modification_type == 'split' and len(variation) > 1:
             # Split a random note into two notes
             # note_idx = choice([i for i in range(0, len(variation)-1) if not i in measure_indices])
@@ -163,16 +165,16 @@ def mutate(individual, mutation_rate, scale_type):
     for i in range(len(individual)):
         if np.random.rand() < mutation_rate:
             # Apply custom mutation (random note change, etc.)
-            if np.random.rand() < 0.9:
+            if np.random.rand() < 0.5:
                 # Add note sequence by extending a random note
                 note_idx = random.randint(0, len(individual) - 1)
                 if individual[note_idx][3]>=1:
                     individual[note_idx:note_idx + 1] = add_note_sequence(individual[note_idx])
-            # elif np.random.rand() < 0.9:
-                # individual = pitch_mutation(individual, scale_type)
-                # individual[i][0] = np.random.randint(0, 128)  # MIDI note range
-            else:
+            elif np.random.rand() < 0.9:
                 individual = duration_mutation(individual)
+                # individual[i][0] = np.random.randint(0, 128)  # MIDI note range
+            # else:
+            #     individual = pitch_mutation(individual, scale_type)
     return individual
 
 
@@ -272,6 +274,10 @@ def calculate_fitness(individual, original_melody, hyperparameters):
     fitness = harmony_score
     return fitness
 
+def NormalizeData(data):
+    normal_data = (data - np.min(data)) / (np.max(data) - np.min(data))
+    normal_data = normal_data.tolist()
+    return normal_data
 
 # Main genetic algorithm function
 def genetic_algorithm(original_melody, population_size, generations, crossover_rate, mutation_rate, scale_type, hyperparameters):
@@ -279,6 +285,8 @@ def genetic_algorithm(original_melody, population_size, generations, crossover_r
     for generation in range(generations):
         # Evaluate fitness for each individual in the population
         fitness_scores = [calculate_fitness(individual, original_melody, hyperparameters) for individual in population]
+        # code to replace all negative value with 0
+        fitness_scores = NormalizeData(fitness_scores)
         # Select parents based on fitness scores (for simplicity, using roulette wheel selection)
         choice_indices = np.random.choice(len(population), size=2, p=np.array(fitness_scores) / np.sum(fitness_scores))
         parents = [population[i] for i in choice_indices]
@@ -307,15 +315,15 @@ if __name__ == "__main__":
     # Set genetic algorithm parameters
     hyperparameters = {'w_similarity': 0.5, 'w_tempo': 0.5}
     population_size = 100
-    generations = 50# 600
+    generations = 50 #600
     crossover_rate = 0.5
-    mutation_rate = 0.15
+    mutation_rate = 0.05
     scale_type = "major"
 
     # Initialize population
     population = initialize_population(original_melody, population_size)
     # print("Initial Population:")
-    print(population[0:2])
+    # print(population[0:2])
 
     # Run the genetic algorithm
     best_variations = genetic_algorithm(original_melody, population_size, generations, 
