@@ -2,6 +2,7 @@ import math
 from music21 import converter, stream, note, chord, meter, tempo, key, instrument, scale
 import random
 import numpy as np
+import copy
 
 def load_midi(file_path):
     # file_path = "Themes/Twinkle-Little-Star (Long Version).mid"
@@ -90,10 +91,13 @@ def add_note_sequence(note_value):
 
 
 def initialize_population(melody, population_size):
-    population = [melody.copy()]  # Start with the original melody
+    # Start with the original melody
+    population = [copy.deepcopy(melody)]
+    # population = [melody.copy()]
     for _ in range(population_size - 1):
-        variation = melody.copy()
-        for i in range(3):
+        variation = copy.deepcopy(melody)
+        # variation = melody.copy()
+        for i in range(5):
             # Apply random modification (split note, swap notes, add note sequence)
             modification_type = random.choice(['split', 'swap', 'add'])
             if modification_type == 'split' and len(variation) > 1:
@@ -142,24 +146,43 @@ def duration_mutation(individual):
     return individual
 
 
-# def get_harmonic_notes(note_value, scale_type):
-#     if scale_type == 'major':
-#         note_harmonic_degree = [i.midi for i in scale.MajorScale(note.Note(note_value).nameWithOctave).pitches]
-#     elif scale_type == 'minor':
-#         note_harmonic_degree = [i.midi for i in scale.MinorScale(note.Note(note_value).nameWithOctave).pitches]
-#     else:
-#         note_harmonic_degree = [i.midi for i in scale.DiatonicScale(note.Note(note_value).nameWithOctave).pitches]
-#     one_octave_lower = [i-12 for i in note_harmonic_degree]
-#     harmonic_notes = one_octave_lower + note_harmonic_degree
-#     return harmonic_notes
+# Define duration mutation: A note is randomly selected and its duration is
+# either doubled or reduced to half
+# def duration_mutation(individual):
+#     note_idx = random.randint(0, len(individual) - 1)
+#     if individual[note_idx][3] == 2:
+#         individual[note_idx][3] /= 2
+#     elif individual[note_idx][3] == 1 and not individual[note_idx][2] + individual[note_idx][3] >= 4:
+#         if np.random.rand() < 0.5:
+#             individual[note_idx][3] *= 2
+#         else:
+#             individual[note_idx][3] /= 2       
+#     elif individual[note_idx][3] == 0.5 and not individual[note_idx][2] + individual[note_idx][3] >= 4:
+#         if np.random.rand() < 0.5:
+#             individual[note_idx][3] *= 2
+#         else:
+#             individual[note_idx][3] /= 2
+#     return individual
 
 
 def get_harmonic_notes(note_value, scale_type):
     if scale_type == 'major':
-        note_harmonic_degree = [note_value-5, note_value, note_value+4]
+        note_harmonic_degree = [i.midi for i in scale.MajorScale(note.Note(note_value).nameWithOctave).pitches]
     elif scale_type == 'minor':
-        note_harmonic_degree = [note_value-5, note_value, note_value+3]
-    return note_harmonic_degree
+        note_harmonic_degree = [i.midi for i in scale.MinorScale(note.Note(note_value).nameWithOctave).pitches]
+    else:
+        note_harmonic_degree = [i.midi for i in scale.DiatonicScale(note.Note(note_value).nameWithOctave).pitches]
+    one_octave_lower = [i-12 for i in note_harmonic_degree]
+    harmonic_notes = one_octave_lower + note_harmonic_degree
+    return harmonic_notes
+
+
+# def get_harmonic_notes(note_value, scale_type):
+#     if scale_type == 'major':
+#         note_harmonic_degree = [note_value-5, note_value, note_value+4]
+#     elif scale_type == 'minor':
+#         note_harmonic_degree = [note_value-5, note_value, note_value+3]
+#     return note_harmonic_degree
 
 
 # Pitch Mutation: A note out of harmony will be selected and changed to
@@ -183,9 +206,8 @@ def mutate(individual, mutation_rate, scale_type):
                 # note_idx = random.randint(0, len(individual) - 1)
                 # if individual[note_idx][3]>=1:
                 #     individual[note_idx:note_idx + 1] = add_note_sequence(individual[note_idx])
-            if np.random.rand() < 0.5:
+            if np.random.rand() < 0.4:
                 individual = duration_mutation(individual)
-                # individual[i][0] = np.random.randint(0, 128)  # MIDI note range
             else:
                 individual = pitch_mutation(individual, scale_type)
     return individual
@@ -278,7 +300,7 @@ def harmony(melody, hyperparameters):
             noteDifference = abs(current_note - prev_note)
             if noteDifference in harmonic_interval_rules.keys():
                 harmonyScore += harmonic_interval_rules[noteDifference]
-            if noteDifference > 7:
+            if noteDifference > 5 and noteDifference != 7 :
                 harmonyScore -= 8
             # Rules 7-10
             if hyperparameters['scale_type'] == "major":
@@ -286,10 +308,14 @@ def harmony(melody, hyperparameters):
                     harmonyScore += 4
                 if note.Note(current_note).name in ["E", "G"]:
                     harmonyScore += 3
+                if note.Note(current_note).name in ["C", "D", "E", "F", "G", "A", "B"]:
+                    harmonyScore += 3
             elif hyperparameters['scale_type'] == "minor":
                 if note.Note(current_note).name == "A":
                     harmonyScore += 4
                 if note.Note(current_note).name in ["C", "E"]:
+                    harmonyScore += 3
+                if note.Note(current_note).name in ["C", "D", "E", "F#", "G#", "A", "B"]:
                     harmonyScore += 3
     return harmonyScore
 
@@ -303,11 +329,12 @@ def calculate_fitness(individual, original_melody, hyperparameters):
     # print('similairty:', similarity, 'complexity:', complexity, 'harmony_score:', harmony_score)
     similarity = melody_similarity(individual, original_melody, hyperparameters['w_similarity'])
     complexity = tempo_complexity(individual, hyperparameters['w_tempo'])
-    # Calculate the fitness score
-    # fitness = hyperparameters['w_harmony'] * harmony_score + hyperparameters['w_similarity'] * similarity + hyperparameters['w_tempo'] * complexity
     harmony_score = harmony(individual, hyperparameters)
-    fitness = similarity + complexity + harmony_score * hyperparameters['w_harmony']
-    # print(similarity, complexity, harmony)
+    # Calculate the fitness score
+    fitness = hyperparameters['w_harmony'] * harmony_score + hyperparameters['w_similarity'] * similarity + hyperparameters['w_tempo'] * complexity
+    if hyperparameters['print_metrics']:
+        # fitness = similarity + complexity + harmony_score * hyperparameters['w_harmony']
+        print(hyperparameters['w_harmony'] * harmony_score, similarity + hyperparameters['w_similarity'], hyperparameters['w_tempo'] * complexity)
     return fitness
 
 
@@ -327,30 +354,49 @@ def selectParents(population, original_melody, hyperparameters):
 def genetic_algorithm(original_melody, population_size, generations, crossover_rate, mutation_rate, hyperparameters):
     population = initialize_population(original_melody, population_size)
     for generation in range(generations):
+        population = sorted(population, key=lambda individual: calculate_fitness(individual, original_melody, hyperparameters), reverse=True)
         # Evaluate fitness for each individual in the population
         fitness_scores = [calculate_fitness(individual, original_melody, hyperparameters) for individual in population]
-        print(sorted(fitness_scores, reverse=True)[:10])
+        if hyperparameters['verbose']:
+            print(sorted(fitness_scores, reverse=True)[:10])
         # code to replace all negative value with 0
         # fitness_scores = NormalizeData(fitness_scores)
         # Select parents based on fitness scores (for simplicity, using roulette wheel selection)
-        choice_indices = np.random.choice(len(population), size=2, p=np.array(fitness_scores) / np.sum(fitness_scores))
-        parents = [population[i] for i in choice_indices]
+        # choice_indices = np.random.choice(len(population), size=2, p=np.array(fitness_scores) / np.sum(fitness_scores))
+        # parents = [population[i] for i in choice_indices]
+        parents = population[0:2]
+        parent_a = copy.deepcopy(parents[0])
+        parent_b = copy.deepcopy(parents[1])
         # Apply crossover
         if np.random.rand() < crossover_rate:
-            child1, child2 = crossover(parents[0], parents[1])
+            child1, child2 = crossover(parent_a, parent_b)
             # Apply mutation
             child1 = mutate(child1, mutation_rate, hyperparameters['scale_type'])
             child2 = mutate(child2, mutation_rate, hyperparameters['scale_type'])
         else:
             # Apply mutation
-            child1 = mutate(parents[0], mutation_rate, hyperparameters['scale_type'])
-            child2 = mutate(parents[1], mutation_rate, hyperparameters['scale_type'])
-        # Replace individuals in the population with the new offspring
-        # Replace individuals in the population with the new offspring
-        min_fitness_index = fitness_scores.index(sorted(fitness_scores)[0])
-        second_min_fitness_index = fitness_scores.index(sorted(fitness_scores)[1])
-        population[min_fitness_index] = child1
-        population[second_min_fitness_index] = child2
+            child1 = mutate(parent_a, mutation_rate, hyperparameters['scale_type'])
+            child2 = mutate(parent_b, mutation_rate, hyperparameters['scale_type'])
+        
+        child1_fitness = calculate_fitness(child1, original_melody, hyperparameters)
+        child2_fitness = calculate_fitness(child2, original_melody, hyperparameters)
+        parent_a_fitness = calculate_fitness(parent_a, original_melody, hyperparameters)
+        parent_b_fitness = calculate_fitness(parent_b, original_melody, hyperparameters)
+
+        # if child1_fitness >= min(fitness_scores):
+        if child1_fitness >= min(parent_a_fitness, parent_b_fitness):
+            min_fitness_index = fitness_scores.index(sorted(fitness_scores)[0])
+            population[min_fitness_index] = child1
+        # if child2_fitness >= min(fitness_scores):
+        if child2_fitness >= min(parent_a_fitness, parent_b_fitness):
+            min_fitness_index = fitness_scores.index(sorted(fitness_scores)[0])
+            population[min_fitness_index] = child2
+
+        # # Replace individuals in the population with the new offspring
+        # min_fitness_index = fitness_scores.index(sorted(fitness_scores)[0])
+        # second_min_fitness_index = fitness_scores.index(sorted(fitness_scores)[1])
+        # population[min_fitness_index] = child1
+        # population[second_min_fitness_index] = child2
     # Return the best individual after all generations
     # best_individual = max(population, key=lambda x: calculate_fitness(x, original_melody, hyperparameters))
     best_individuals = sorted(population, key=lambda x: calculate_fitness(x, original_melody, hyperparameters), reverse=True)[0:10]
@@ -395,11 +441,11 @@ if __name__ == "__main__":
     original_melody = load_midi("Themes/twinkle-twinkle-little-star.mid")
     
     # Set genetic algorithm parameters
-    hyperparameters = {'w_harmony': 1, 'w_similarity': 10, 'w_tempo': 1, 'scale_type': 'major'}
+    hyperparameters = {'w_harmony': 1, 'w_similarity': 15, 'w_tempo': 0, 'scale_type': 'major', 'print_metrics': False, 'verbose': True}
     population_size = 100
-    generations = 50
+    generations = 600
     crossover_rate = 0.5
-    mutation_rate = 0.001
+    mutation_rate = 0.05
 
     # Initialize population
     population = initialize_population(original_melody, population_size)
@@ -414,8 +460,5 @@ if __name__ == "__main__":
         create_midi_file(piece, f"output/variation_{i}.mid", bpm=120)
     
 # Things to do:
-# 1. Change cross over so that it doesn't take the last bar into consideration as this is the cadence.
-# 2. Change the pitch mutations by incorporating more sequence patterns
-# 3. Change melodic similarity fn
-# 4. If it's a minim, do not add pitch or rhythm mutation
-# 5. ``````select `top 2 parents by f score
+# 1. Change the pitch mutations by incorporating more sequence patterns
+# 2. If it's a minim, do not add pitch or rhythm mutation
