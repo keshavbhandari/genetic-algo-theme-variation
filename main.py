@@ -297,16 +297,16 @@ def harmony(melody, hyperparameters):
 # Define fitness function (example: harmonic, similarity, rhythmic diversity)
 def calculate_fitness(individual, original_melody, hyperparameters):
     # Calculate fitness based on harmony, similarity, rhythmic diversity
-    similarity = melody_similarity(individual, original_melody)
-    complexity = tempo_complexity(individual) * 100
-    harmony_score = harmony(individual, hyperparameters)
+    # similarity = melody_similarity(individual, original_melody)
+    # complexity = tempo_complexity(individual) * 100
+    # harmony_score = harmony(individual, hyperparameters)
     # print('similairty:', similarity, 'complexity:', complexity, 'harmony_score:', harmony_score)
     similarity = melody_similarity(individual, original_melody, hyperparameters['w_similarity'])
     complexity = tempo_complexity(individual, hyperparameters['w_tempo'])
     # Calculate the fitness score
-    fitness = hyperparameters['w_harmony'] * harmony_score + hyperparameters['w_similarity'] * similarity + hyperparameters['w_tempo'] * complexity
-    harmony_score = harmony(individual)
-    fitness = similarity + complexity + harmony_score
+    # fitness = hyperparameters['w_harmony'] * harmony_score + hyperparameters['w_similarity'] * similarity + hyperparameters['w_tempo'] * complexity
+    harmony_score = harmony(individual, hyperparameters)
+    fitness = similarity + complexity + harmony_score * hyperparameters['w_harmony']
     # print(similarity, complexity, harmony)
     return fitness
 
@@ -395,7 +395,7 @@ if __name__ == "__main__":
     original_melody = load_midi("Themes/twinkle-twinkle-little-star.mid")
     
     # Set genetic algorithm parameters
-    hyperparameters = {'w_harmony': 1, 'w_similarity': 0, 'w_tempo': 0, 'scale_type': 'major'}
+    hyperparameters = {'w_harmony': 1, 'w_similarity': 10, 'w_tempo': 1, 'scale_type': 'major'}
     population_size = 100
     generations = 50
     crossover_rate = 0.5
@@ -418,3 +418,4 @@ if __name__ == "__main__":
 # 2. Change the pitch mutations by incorporating more sequence patterns
 # 3. Change melodic similarity fn
 # 4. If it's a minim, do not add pitch or rhythm mutation
+# 5. ``````select `top 2 parents by f score
