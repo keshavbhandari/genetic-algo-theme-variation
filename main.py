@@ -290,7 +290,7 @@ def calculate_fitness(individual, original_melody, hyperparameters):
     similarity = melody_similarity(individual, original_melody)
     complexity = tempo_complexity(individual) * 100
     harmony_score = harmony(individual, hyperparameters)
-    # print('similairty:', similarity)
+    # print('similairty:', similarity, 'complexity:', complexity, 'harmony_score:', harmony_score)
     # Calculate the fitness score
     fitness = hyperparameters['w_harmony'] * harmony_score + hyperparameters['w_similarity'] * similarity + hyperparameters['w_tempo'] * complexity
     return fitness
@@ -302,15 +302,21 @@ def NormalizeData(data):
     return normal_data
 
 
+def selectParents(population, original_melody, hyperparameters):
+    """ Selects two sequences from the population. Probability of being selected is weighted by the fitness score of each sequence """
+    parentA, parentB = random.choices(population, weights=[calculate_fitness(genome, original_melody, hyperparameters) for genome in population], k=2)
+    return parentA, parentB
+
+
 # Main genetic algorithm function
 def genetic_algorithm(original_melody, population_size, generations, crossover_rate, mutation_rate, hyperparameters):
     population = initialize_population(original_melody, population_size)
     for generation in range(generations):
         # Evaluate fitness for each individual in the population
         fitness_scores = [calculate_fitness(individual, original_melody, hyperparameters) for individual in population]
-        print(sorted(range(len(fitness_scores)), key=lambda i: fitness_scores[i], reverse=True)[:10])
+        print(sorted(fitness_scores, reverse=True)[:10])
         # code to replace all negative value with 0
-        fitness_scores = NormalizeData(fitness_scores)
+        # fitness_scores = NormalizeData(fitness_scores)
         # Select parents based on fitness scores (for simplicity, using roulette wheel selection)
         choice_indices = np.random.choice(len(population), size=2, p=np.array(fitness_scores) / np.sum(fitness_scores))
         parents = [population[i] for i in choice_indices]
@@ -336,17 +342,49 @@ def genetic_algorithm(original_melody, population_size, generations, crossover_r
     return best_individuals
 
 
+# Main genetic algorithm function
+# def genetic_algorithm(original_melody, population_size, generations, crossover_rate, mutation_rate, hyperparameters):
+#     """ Runs genetic algorithm until a genome with the specified MAX_FITNESS score has been reached"""
+
+#     population = initialize_population(original_melody, population_size)
+
+#     nextGeneration = []
+#     for i in range(generations):
+#         print(i)
+
+#         population = sorted(population, key=lambda individual: calculate_fitness(individual, original_melody, hyperparameters), reverse=True)
+
+#         nextGeneration = population[0:2]
+
+#         for j in range(int(len(population) / 2) - 1):
+#             parentA, parentB = selectParents(population, original_melody, hyperparameters)
+#             if np.random.rand() < crossover_rate:
+#                 child1, child2 = crossover(parentA, parentB)
+#                 child1 = mutate(child1, mutation_rate, hyperparameters['scale_type'])
+#                 child2 = mutate(child2, mutation_rate, hyperparameters['scale_type'])
+#             else:
+#                 child1 = mutate(parentA, mutation_rate, hyperparameters['scale_type'])
+#                 child2 = mutate(parentB, mutation_rate, hyperparameters['scale_type'])
+
+#             nextGeneration += [child1, child2]
+
+#         population = nextGeneration
+
+#     best_individuals = sorted(population, key=lambda x: calculate_fitness(x, original_melody, hyperparameters), reverse=True)[0:10]
+#     return best_individuals
+
+
 # Example usage
 if __name__ == "__main__":
     # Load original melody from MIDI file
     original_melody = load_midi("Themes/twinkle-twinkle-little-star.mid")
     
     # Set genetic algorithm parameters
-    hyperparameters = {'w_harmony': 0.8, 'w_similarity': 0, 'w_tempo': 0.2, 'scale_type': 'major'}
+    hyperparameters = {'w_harmony': 1, 'w_similarity': 0, 'w_tempo': 0, 'scale_type': 'major'}
     population_size = 100
-    generations = 200
+    generations = 50
     crossover_rate = 0.5
-    mutation_rate = 0.02
+    mutation_rate = 0.001
 
     # Initialize population
     population = initialize_population(original_melody, population_size)
@@ -360,3 +398,8 @@ if __name__ == "__main__":
     for i, piece in enumerate(best_variations):
         create_midi_file(piece, f"output/variation_{i}.mid", bpm=120)
     
+# Things to do:
+# 1. Change cross over so that it doesn't take the last bar into consideration as this is the cadence.
+# 2. Change the pitch mutations by incorporating more sequence patterns
+# 3. Change melodic similarity fn
+# 4. If it's a minim, do not add pitch or rhythm mutation
