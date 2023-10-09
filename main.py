@@ -72,7 +72,10 @@ def swap_notes(melody):
     # Randomly choose an indices within a bar
     bar_idx = random.sample(range(len(bars)), 1)[0]
     idx1, idx2 = random.sample(range(len(bars[bar_idx])), 2)
+    # print(bar_idx, idx1, idx2)
     melody[bar_idx+idx1][0], melody[bar_idx+idx2][0] = melody[bar_idx+idx2][0], melody[bar_idx+idx1][0]
+    # print(melody[bar_idx+idx1][0], melody[bar_idx+idx2][0])
+    # print()
     return melody
 
 
@@ -113,9 +116,13 @@ def initialize_population(melody, population_size):
 def crossover(parent1, parent2, crossover_rate):
     if np.random.rand() < crossover_rate:
         # Single point crossover: Split parents at a random point and swap the segments
+        parent1 = chop_into_bars(parent1)
+        parent2 = chop_into_bars(parent2)
         crossover_point = random.randint(1, min(len(parent1), len(parent2)) - 1)
         child1 = parent1[:crossover_point] + parent2[crossover_point:]
         child2 = parent2[:crossover_point] + parent1[crossover_point:]
+        child1 = join_into_melody(child1)
+        child2 = join_into_melody(child2)
         return child1, child2
     else:
         child1 = parent1.copy()
@@ -184,6 +191,13 @@ def chop_into_bars(melody):
     return chop_into
 
 
+def join_into_melody(bars):
+    melody = []
+    for b in bars:
+        melody += b
+    return melody
+
+
 def melody_similarity(melody_a, melody_b, weight=1):
     melody_a = chop_into_bars(melody_a)
     melody_b = chop_into_bars(melody_b)
@@ -241,6 +255,8 @@ def tempo_complexity(melody, weight=1):
 def metricity(notes):
     weights = [5, 1, 2, 1, 3, 1, 2, 1, 4, 1, 2, 1, 3, 1, 2, 1]
     positions = [int(n[2] * 4) for n in notes]
+    # print('N', notes)
+    # print('P', positions)
     metricity = sum([weights[p] for p in positions])
     return metricity
 
@@ -267,11 +283,10 @@ def calculate_fitness(individual, original_melody, hyperparameters):
     # Calculate fitness based on harmony, similarity, rhythmic diversity
     similarity = melody_similarity(individual, original_melody, hyperparameters['w_similarity'])
     complexity = tempo_complexity(individual, hyperparameters['w_tempo'])
-    # print(similarity, complexity)
     # Calculate the fitness score
-    # fitness = hyperparameters['w_similarity'] * similarity + hyperparameters['w_tempo'] * complexity
     harmony_score = harmony(individual)
-    fitness = harmony_score
+    fitness = similarity + complexity + harmony_score
+    # print(similarity, complexity, harmony)
     return fitness
 
 def NormalizeData(data):
@@ -283,6 +298,10 @@ def NormalizeData(data):
 def genetic_algorithm(original_melody, population_size, generations, crossover_rate, mutation_rate, scale_type, hyperparameters):
     population = initialize_population(original_melody, population_size)
     for generation in range(generations):
+        for i, pop in enumerate(population):
+            for j, n in enumerate(pop):
+                if n[2] >= 4:
+                    print(generation, 'HERE', i, j, n)
         # Evaluate fitness for each individual in the population
         fitness_scores = [calculate_fitness(individual, original_melody, hyperparameters) for individual in population]
         # code to replace all negative value with 0
@@ -299,9 +318,10 @@ def genetic_algorithm(original_melody, population_size, generations, crossover_r
         child1 = mutate(child1, mutation_rate, scale_type)
         child2 = mutate(child2, mutation_rate, scale_type)
         # Replace individuals in the population with the new offspring
-        # Replace individuals in the population with the new offspring
         min_fitness_index = fitness_scores.index(sorted(fitness_scores)[0])
         second_min_fitness_index = fitness_scores.index(sorted(fitness_scores)[1])
+        print(min_fitness_index, second_min_fitness_index)
+        print()
         population[min_fitness_index] = child1
         population[second_min_fitness_index] = child2
     # Return the best individual after all generations
@@ -316,7 +336,7 @@ if __name__ == "__main__":
     original_melody = load_midi("Themes/twinkle-twinkle-little-star.mid")
     
     # Set genetic algorithm parameters
-    hyperparameters = {'w_similarity': 0.5, 'w_tempo': 0.5}
+    hyperparameters = {'w_similarity': 1, 'w_tempo': 0.5}
     population_size = 100
     generations = 50 #600
     crossover_rate = 0.5
