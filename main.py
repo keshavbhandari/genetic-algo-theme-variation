@@ -6,30 +6,34 @@ from utils import *
 from fitness import *
 from mutations import *
 
+
 def initialize_population(melody, population_size):
     # Start with the original melody
     population = [copy.deepcopy(melody)]
     # population = [melody.copy()]
     for _ in range(population_size - 1):
         variation = copy.deepcopy(melody)
-        # variation = melody.copy()
-        for i in range(8):
-            # Apply random modification (split note, swap notes, add note sequence)
-            modification_type = random.choice(['split', 'swap', 'add'])
-            if modification_type == 'split' and len(variation) > 1:
-                # Split a random note into two notes
-                note_idx = random.randint(1, len(variation) - 1)
-                if variation[note_idx][3] >= 0.5:
-                    variation[note_idx: note_idx + 1] = split_note(variation[note_idx])
-            elif modification_type == 'swap' and len(variation) > 1:
-                # Swap two random notes within the melody
-                variation = swap_notes(variation)
-            elif modification_type == 'add':
-                # Add note sequence by extending a random note
-                note_idx = random.randint(1, len(variation) - 1)
-                if variation[note_idx][3] >= 1:
-                    variation[note_idx:note_idx + 1] = add_note_sequence(variation[note_idx])
-        population.append(variation)
+        variation_bars = chop_into_bars(variation)
+        all_bars = []
+        for n, bars in enumerate(variation_bars):
+            if n < len(variation_bars)-1:
+                note_idx = random.randint(0, len(bars)-1)
+                # Apply random modification (split note, swap notes, add note sequence)
+                modification_type = random.choice(['split', 'swap', 'add'])
+                if modification_type == 'split':
+                    if bars[note_idx][3] >= 0.5:
+                        # Split a random note into two notes
+                        bars[note_idx: note_idx + 1] = split_note(bars[note_idx])
+                elif modification_type == 'swap':
+                    # Swap two random notes within the melody
+                    bars = swap_notes(bars)
+                elif modification_type == 'add':
+                    if bars[note_idx][3] >= 1:
+                        # Add note sequence by extending a random note
+                        bars[note_idx:note_idx + 1] = add_note_sequence(bars[note_idx])
+            all_bars.append(bars)
+        variation_joined = join_into_melody(all_bars)
+        population.append(variation_joined)
     return population
 
 
@@ -59,7 +63,7 @@ def calculate_fitness(individual, original_melody, hyperparameters):
     fitness = hyperparameters['w_harmony'] * harmony_score + hyperparameters['w_similarity'] * similarity + hyperparameters['w_tempo'] * complexity
     if hyperparameters['print_metrics']:
         # fitness = similarity + complexity + harmony_score * hyperparameters['w_harmony']
-        print(hyperparameters['w_harmony'] * harmony_score, similarity + hyperparameters['w_similarity'], hyperparameters['w_tempo'] * complexity)
+        print(hyperparameters['w_harmony'] * harmony_score, similarity * hyperparameters['w_similarity'], hyperparameters['w_tempo'] * complexity)
     return fitness
 
 
@@ -83,7 +87,7 @@ def genetic_algorithm(original_melody, population_size, generations, crossover_r
         # Evaluate fitness for each individual in the population
         fitness_scores = [calculate_fitness(individual, original_melody, hyperparameters) for individual in population]
         if hyperparameters['verbose']:
-            print(sorted(fitness_scores, reverse=True)[:10])
+            print(generation, np.round(sorted(fitness_scores, reverse=True)[:10], 2))
         # code to replace all negative value with 0
         # fitness_scores = NormalizeData(fitness_scores)
         # Select parents based on fitness scores (for simplicity, using roulette wheel selection)
@@ -124,7 +128,7 @@ def genetic_algorithm(original_melody, population_size, generations, crossover_r
         # population[second_min_fitness_index] = child2
     # Return the best individual after all generations
     # best_individual = max(population, key=lambda x: calculate_fitness(x, original_melody, hyperparameters))
-    best_individual = sorted(population, key=lambda x: calculate_fitness(x, original_melody, hyperparameters), reverse=True)[0]
+    best_individual = sorted(population, key=lambda x: calculate_fitness(x, original_melody, hyperparameters), reverse=True)[:10]
     return best_individual
 
 
@@ -166,9 +170,10 @@ if __name__ == "__main__":
     original_melody = load_midi("Themes/twinkle-twinkle-little-star.mid")
     
     # Set genetic algorithm parameters
-    hyperparameters = {'w_harmony': 1, 'w_similarity': 15, 'w_tempo': 0, 'scale_type': 'major', 'print_metrics': False, 'verbose': True}
+    hyperparameters = {'w_harmony': 1, 'w_similarity': 5, 'w_tempo': 5, 'scale_type': 'major', 
+                       'print_metrics': False, 'verbose': True}
     population_size = 100
-    generations = 600
+    generations = 50 #600
     crossover_rate = 0.5
     mutation_rate = 0.05
 
@@ -188,3 +193,5 @@ if __name__ == "__main__":
 # 1. Change the pitch mutations by incorporating more sequence patterns
 # 2. If it's a minim, do not add pitch or rhythm mutation
 # 3. Change initialization by adding mutations to different bars
+
+# Best: 'w_harmony': 1, 'w_similarity': 15, 'w_tempo': 0 with 10 generations

@@ -4,18 +4,19 @@ from utils import *
 from music21 import converter, stream, note, chord, meter, tempo, key, instrument, scale
 
 
-def swap_notes(melody):
+def swap_notes(bars):
     # Chop melody into bars
-    bars = chop_into_bars(melody)
+    # bars = chop_into_bars(melody)
     # Randomly choose an indices within a bar
-    bar_idx = random.sample(range(len(bars)), 1)[0]
-    idx1 = random.randint(1, len(bars[bar_idx])+1)
-    if idx1==len(bars[bar_idx]):
+    # bar_idx = random.sample(range(len(bar)), 1)[0]
+    idx1 = random.randint(0, len(bars)-1)
+    if idx1==len(bars)-1:
         idx2 = idx1-1
     else:
         idx2 = idx1+1
-    melody[bar_idx+idx1][0], melody[bar_idx+idx2][0] = melody[bar_idx+idx2][0], melody[bar_idx+idx1][0]
-    return melody
+    bars[idx1][0], bars[idx2][0] = bars[idx2][0], bars[idx1][0]
+    # melody[bar_idx+idx1][0], melody[bar_idx+idx2][0] = melody[bar_idx+idx2][0], melody[bar_idx+idx1][0]
+    return bars
 
 
 def split_note(note_value, n_splits=2):
@@ -110,11 +111,6 @@ def mutate(individual, mutation_rate, scale_type):
     for i in range(len(individual)):
         if np.random.rand() < mutation_rate:
             # Apply custom mutation (random note change, etc.)
-            # if np.random.rand() < 0.5:
-                # Add note sequence by extending a random note
-                # note_idx = random.randint(0, len(individual) - 1)
-                # if individual[note_idx][3]>=1:
-                #     individual[note_idx:note_idx + 1] = add_note_sequence(individual[note_idx])
             if np.random.rand() < 0.4:
                 individual = duration_mutation(individual)
             else:
