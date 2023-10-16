@@ -187,7 +187,7 @@ if __name__ == "__main__":
                                        crossover_rate, mutation_rate, hyperparameters)
     # print(best_variation)
     for i, piece in enumerate(best_variations):
-        create_midi_file(piece, f"output/variation_{i}.mid", bpm=120)
+        create_midi_file(piece, f"Output/variation_{i}.mid", bpm=120)
     
 # Things to do:
 # 1. Change the pitch mutations by incorporating more sequence patterns
