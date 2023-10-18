@@ -170,8 +170,8 @@ if __name__ == "__main__":
     original_melody = load_midi("Themes/twinkle-twinkle-little-star.mid")
     
     # Set genetic algorithm parameters
-    hyperparameters = {'w_harmony': 1, 'w_similarity': 5, 'w_tempo': 5, 'scale_type': 'major', 
-                       'print_metrics': False, 'verbose': True}
+    hyperparameters = {'w_harmony': 12, 'w_similarity': 1, 'w_tempo': 5, 'scale_type': 'major', 
+                       'print_metrics': True, 'verbose': False}
     population_size = 100
     generations = 50 #600
     crossover_rate = 0.5
