@@ -179,3 +179,7 @@ if __name__ == "__main__":
 # 3. Change initialization by adding mutations to different bars
 
 # Best: 'w_harmony': 1, 'w_similarity': 15, 'w_tempo': 0 with 10 generations
+
+
+# Hill climbing
+# Plateau, random restart, keep the best
