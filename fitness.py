@@ -95,4 +95,4 @@ def harmony(melody, hyperparameters):
                     harmonyScore += 3
                 if note.Note(current_note).name in ["C", "D", "E", "F#", "G#", "A", "B"]:
                     harmonyScore += 3
-    return harmonyScore
+    return harmonyScore / len(melody)
