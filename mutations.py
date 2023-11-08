@@ -106,8 +106,6 @@ def mutate(individual, mutation_rate, scale_type):
 def post_processing(individuals, hyperparameter):
     for individual in individuals:
         # Fix cadence
-        if hyperparameter['scale_type'] == 'major':
-            individual[-1][0] = "C"
-        elif hyperparameter['scale_type'] == 'minor':
-            individual[-1][0] = "A"
+        # individual[-1][0] = hyperparameter["key_signature"]
+        individual[-1][0] = individual[0][0]
     return individuals
