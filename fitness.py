@@ -68,6 +68,15 @@ def metricity(notes):
 
 
 def harmony(melody, hyperparameters):
+    scale_type = hyperparameters['scale_type']
+    key_signature = hyperparameters['key_signature']
+    tonic_class = note.Note(key_signature).pitch.pitchClass
+    major_score_map = [5, 0, 2, 0,
+                       4, 2, 0, 4,
+                       0, 2, 0, 2]
+    minor_score_map = [5, 0, 2, 4,
+                       0, 2, 0, 4,
+                       2, 0, 2, 0]
     harmonyScore = 0
     harmonic_interval_rules = {0: 3, 2: 3, 4: 3, 5: 3, 7: 3}
     for j, note_value in enumerate(melody):
@@ -78,21 +87,13 @@ def harmony(melody, hyperparameters):
             noteDifference = abs(current_note - prev_note)
             if noteDifference in harmonic_interval_rules.keys():
                 harmonyScore += harmonic_interval_rules[noteDifference]
-            if noteDifference > 5 and noteDifference != 7 :
+            if noteDifference > 7 and noteDifference:
                 harmonyScore -= 8
             # Rules 7-10
-            if hyperparameters['scale_type'] == "major":
-                if note.Note(current_note).name == "C":
-                    harmonyScore += 4
-                if note.Note(current_note).name in ["E", "G"]:
-                    harmonyScore += 3
-                if note.Note(current_note).name in ["C", "D", "E", "F", "G", "A", "B"]:
-                    harmonyScore += 3
-            elif hyperparameters['scale_type'] == "minor":
-                if note.Note(current_note).name == "A":
-                    harmonyScore += 4
-                if note.Note(current_note).name in ["C", "E"]:
-                    harmonyScore += 3
-                if note.Note(current_note).name in ["C", "D", "E", "F#", "G#", "A", "B"]:
-                    harmonyScore += 3
+            semi_to_tonic = (current_note - tonic_class + 12) % 12
+            if scale_type == 'major':
+                harmonyScore += major_score_map[semi_to_tonic]
+            else:
+                harmonyScore += minor_score_map[semi_to_tonic]
+
     return harmonyScore / len(melody)

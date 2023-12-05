@@ -1,7 +1,7 @@
 import random
 import numpy as np
-from utils import *
-from music21 import converter, stream, note, chord, meter, tempo, key, instrument, scale
+from music21 import note, scale
+import copy
 
 
 def swap_notes(bars):
@@ -34,40 +34,6 @@ def add_note_sequence(note_value):
     return note_sequence
 
 
-# # Define duration mutation: A note is randomly selected and its duration is
-# # either doubled or reduced to half
-# def duration_mutation(individual):
-#     note_idx = random.randint(0, len(individual) - 1)
-#     if individual[note_idx][3] > 1:
-#         individual[note_idx][3] /= 2
-#     elif individual[note_idx][3] < 1 and not individual[note_idx][2] + individual[note_idx][3] >= 4:
-#         individual[note_idx][3] *= 2
-#     else:
-#         if np.random.rand() < 0.5:
-#             individual[note_idx][3] /= 2
-#         else:
-#             if not individual[note_idx][2] + individual[note_idx][3] >= 4:
-#                 individual[note_idx][3] *= 2
-#     return individual
-
-
-# Define duration mutation: A note is randomly selected and its duration is
-# either doubled or reduced to half
-def duration_mutation(individual):
-    note_idx = random.randint(0, len(individual) - 1)
-    if individual[note_idx][3] > 1 and not individual[note_idx][1] + individual[note_idx][3] >= 4:
-        individual[note_idx][3] /= 2
-    elif individual[note_idx][3] < 1 and not individual[note_idx][1] + individual[note_idx][3] >= 4:
-        individual[note_idx][3] *= 2
-    elif individual[note_idx][3] == 1 and not individual[note_idx][1] + individual[note_idx][3] >= 4:
-        if np.random.rand() < 0.5:
-            individual[note_idx][3] /= 2
-        else:
-            if not individual[note_idx][2] + individual[note_idx][3] >= 4:
-                individual[note_idx][3] *= 2
-    return individual
-
-
 def get_harmonic_notes(note_value, scale_type):
     if scale_type == 'major':
         note_harmonic_degree = [i.midi for i in scale.MajorScale(note.Note(note_value).nameWithOctave).pitches]
@@ -80,10 +46,16 @@ def get_harmonic_notes(note_value, scale_type):
     return harmonic_notes
 
 
-# Pitch Mutation: A note out of harmony will be selected and changed to
-# one of a harmony degree based on the previous note.
-def pitch_mutation(individual, scale_type):
-    note_idx = random.randint(1, len(individual) - 1)
+def post_processing(individuals, hyperparameter):
+    for individual in individuals:
+        # Fix cadence
+        # individual[-1][0] = hyperparameter["key_signature"]
+        individual[-1][0] = individual[0][0]
+    return individuals
+
+
+def pitch_mutation(individual, scale_type, note_idx):
+    # note_idx = random.randint(1, len(individual) - 1)
     prev_note_idx = note_idx - 1
     previous_note = individual[prev_note_idx][0]
     harmonic_notes = get_harmonic_notes(previous_note, scale_type)
@@ -91,21 +63,27 @@ def pitch_mutation(individual, scale_type):
     return individual
 
 
-# Define mutation operator (for example, random note change)
-def mutate(individual, mutation_rate, scale_type):
-    for i in range(len(individual)):
-        if i not in [0, len(individual)] and np.random.rand() < mutation_rate:
-            # Apply custom mutation (random note change, etc.)
-            if np.random.rand() < 0.4:
-                individual = duration_mutation(individual)
-            else:
-                individual = pitch_mutation(individual, scale_type)
+def duration_mutation(individual, note_idx):
+    # note_idx = random.randint(0, len(individual) - 1)
+    if individual[note_idx][3] > 1 and not individual[note_idx][1] + individual[note_idx][3] >= 4:
+        individual[note_idx][3] /= 2
+    elif individual[note_idx][3] < 1 and not individual[note_idx][1] + individual[note_idx][3] >= 4:
+        individual[note_idx][3] *= 2
+    elif individual[note_idx][3] == 1 and not individual[note_idx][1] + individual[note_idx][3] >= 4:
+        if np.random.rand() < 0.5:
+            individual[note_idx][3] /= 2
+        else:
+            if not individual[note_idx][2] + individual[note_idx][3] >= 4:
+                individual[note_idx][3] *= 2
     return individual
 
-
-def post_processing(individuals, hyperparameter):
-    for individual in individuals:
-        # Fix cadence
-        # individual[-1][0] = hyperparameter["key_signature"]
-        individual[-1][0] = individual[0][0]
-    return individuals
+def mutate(pool, pMuta, scale_type):
+    mutated_pool = []
+    for individual in pool:
+        for note_idx in range(len(individual)):
+            if random.random() < pMuta[0]:
+                individual = pitch_mutation(individual, scale_type, note_idx)
+            if random.random() < pMuta[1]:
+                individual = duration_mutation(individual, note_idx)
+        mutated_pool.append(copy.deepcopy(individual))
+    return mutated_pool
