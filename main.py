@@ -153,9 +153,10 @@ def genetic_algorithm(original_melody, population_size, generations, crossover_r
 # Example usage
 if __name__ == "__main__":
     # Load original melody from MIDI file
-    # original_melody = load_midi("Themes/twinkle-twinkle-little-star.mid")
+    original_melody, key_signature, key_type = load_midi("Themes/twinkle-twinkle-little-star.mid")
+    # original_melody, key_signature, key_type = load_midi_v2("Themes/twinkle-twinkle-little-star.mid")
     # original_melody, key_signature, key_type = load_midi_v2("Themes/Bach_Minuet_in_G.mid")
-    original_melody, key_signature, key_type = load_midi_v2("Themes/Sweet.mid")
+    # original_melody, key_signature, key_type = load_midi_v2("Themes/Sweet.mid")
     create_midi_file(original_melody, f"Output/original.mid", bpm=120)
     
     # Set genetic algorithm parameters

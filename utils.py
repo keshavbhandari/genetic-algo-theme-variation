@@ -3,6 +3,8 @@ from music21 import converter, stream, note, chord, meter, tempo, key, instrumen
 def load_midi(file_path):
     # file_path = "Themes/Twinkle-Little-Star (Long Version).mid"
     midi_stream = converter.parse(file_path)
+    key_signature = midi_stream.analyze('key').tonicPitchNameWithCase
+    key_type = midi_stream.analyze('key').type
     melody = []
     voice_number = 1
     for element in midi_stream.recurse():
@@ -19,7 +21,7 @@ def load_midi(file_path):
                 leading_note = max(element.pitches, key=lambda x: x.midi)
                 melody.append([leading_note.midi, element.beat, element.offset, element.duration.quarterLength,
                                element.volume.velocity])
-    return melody
+    return melody, key_signature, key_type
 
 
 def load_midi_v2(file_path):
