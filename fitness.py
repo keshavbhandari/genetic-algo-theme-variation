@@ -4,13 +4,13 @@ from utils import *
 import numpy as np
 
 
-def melody_similarity(melody_a, melody_b, weight=1):
+def melody_similarity(melody_a, melody_b):
     melody_a = chop_into_bars(melody_a)
     melody_b = chop_into_bars(melody_b)
     n_bars = min(len(melody_a), len(melody_b))
     ce_differences = [central_effect(melody_a[i]) - central_effect(melody_b[i]) for i in range(n_bars)]
     ce_distances = [np.sum(np.square(diff)) for diff in ce_differences]
-    score = 100 - np.average(ce_distances) * weight
+    score = 1 - np.average(ce_distances)
     return score
 
 
@@ -34,7 +34,7 @@ def note_coordinate(note, h=math.sqrt(1 / 6)):
     return [x, y, z]
 
 
-def tempo_complexity(melody, weight=1):
+def tempo_complexity(melody):
     max_metricity = [5,
                      5 + 4,
                      5 + 4 + 3,
@@ -54,7 +54,7 @@ def tempo_complexity(melody, weight=1):
                      ]
     melody = chop_into_bars(melody)
     complexity = [max_metricity[len(bar)-1] - metricity(bar) for bar in melody]
-    score = sum(complexity) / len(complexity) * weight
+    score = sum(complexity) / len(complexity)
     return score
 
 

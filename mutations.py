@@ -52,17 +52,14 @@ def post_processing(individuals, hyperparameter):
 
 def pitch_mutation(individual, harmonic_notes, note_idx):
     previous_note = individual[note_idx-1][0] % 12
-    if random.random() < 0.5:
-        choices = [x for x in harmonic_notes if x < previous_note][-3:]
-    else:
-        choices = [x for x in harmonic_notes if x >= previous_note][:4]
+    choices = [x for x in harmonic_notes if x < previous_note][-7:] + \
+              [x for x in harmonic_notes if x >= previous_note][:7]
     jump = random.choice(choices) - previous_note
-    individual[note_idx][0] += jump
+    individual[note_idx][0] = individual[note_idx-1][0] + jump
     return individual
 
 
 def duration_mutation(individual, note_idx):
-    # note_idx = random.randint(0, len(individual) - 1)
     if individual[note_idx][3] > 1 and not individual[note_idx][1] + individual[note_idx][3] >= 4:
         individual[note_idx][3] /= 2
     elif individual[note_idx][3] < 1 and not individual[note_idx][1] + individual[note_idx][3] >= 4:
@@ -76,11 +73,10 @@ def duration_mutation(individual, note_idx):
     return individual
 
 def mutate(pool, pMuta, harmonic_notes):
-    # harmonic_notes = get_harmonic_notes(hyperparameters['scale_type'], hyperparameters['key_signature'])
     mutated_pool = []
     for individual in pool:
-        for note_idx in range(1, len(individual)-1):
-            if random.random() < pMuta[0]:
+        for note_idx in range(len(individual)):
+            if random.random() < pMuta[0] and note_idx != 0:
                 individual = pitch_mutation(individual, harmonic_notes, note_idx)
             if random.random() < pMuta[1]:
                 individual = duration_mutation(individual, note_idx)
