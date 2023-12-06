@@ -34,15 +34,11 @@ def add_note_sequence(note_value):
     return note_sequence
 
 
-def get_harmonic_notes(note_value, scale_type):
+def get_harmonic_notes(scale_type, key_signature):
     if scale_type == 'major':
-        note_harmonic_degree = [i.midi for i in scale.MajorScale(note.Note(note_value).nameWithOctave).pitches]
+        harmonic_notes = [i.midi for i in scale.MajorScale(key_signature).pitches]
     elif scale_type == 'minor':
-        note_harmonic_degree = [i.midi for i in scale.MinorScale(note.Note(note_value).nameWithOctave).pitches]
-    else:
-        note_harmonic_degree = [i.midi for i in scale.DiatonicScale(note.Note(note_value).nameWithOctave).pitches]
-    one_octave_lower = [i-12 for i in note_harmonic_degree]
-    harmonic_notes = one_octave_lower + note_harmonic_degree
+        harmonic_notes = [i.midi for i in scale.MinorScale(key_signature).pitches]
     return harmonic_notes
 
 
@@ -54,12 +50,14 @@ def post_processing(individuals, hyperparameter):
     return individuals
 
 
-def pitch_mutation(individual, scale_type, note_idx):
-    # note_idx = random.randint(1, len(individual) - 1)
-    prev_note_idx = note_idx - 1
-    previous_note = individual[prev_note_idx][0]
-    harmonic_notes = get_harmonic_notes(previous_note, scale_type)
-    individual[note_idx][0] = random.choice(harmonic_notes)
+def pitch_mutation(individual, harmonic_notes, note_idx):
+    previous_note = individual[note_idx-1][0] % 12
+    if random.random() < 0.5:
+        choices = [x for x in harmonic_notes if x < previous_note][-3:]
+    else:
+        choices = [x for x in harmonic_notes if x >= previous_note][:4]
+    jump = random.choice(choices) - previous_note
+    individual[note_idx][0] += jump
     return individual
 
 
@@ -77,12 +75,13 @@ def duration_mutation(individual, note_idx):
                 individual[note_idx][3] *= 2
     return individual
 
-def mutate(pool, pMuta, scale_type):
+def mutate(pool, pMuta, harmonic_notes):
+    # harmonic_notes = get_harmonic_notes(hyperparameters['scale_type'], hyperparameters['key_signature'])
     mutated_pool = []
     for individual in pool:
-        for note_idx in range(len(individual)):
+        for note_idx in range(1, len(individual)-1):
             if random.random() < pMuta[0]:
-                individual = pitch_mutation(individual, scale_type, note_idx)
+                individual = pitch_mutation(individual, harmonic_notes, note_idx)
             if random.random() < pMuta[1]:
                 individual = duration_mutation(individual, note_idx)
         mutated_pool.append(copy.deepcopy(individual))

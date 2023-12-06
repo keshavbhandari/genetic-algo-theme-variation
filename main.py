@@ -83,11 +83,13 @@ def sort_by_fitness(pool, original_melody, hyperparameters):
 def genetic_algorithm(original_melody, population_size, generations, crossover_rate, mutation_rate, hyperparameters):
     population = initialize_population(original_melody, population_size)
     population, fitness_scores = sort_by_fitness(population, original_melody, hyperparameters)
-
+    harmonic_notes = get_harmonic_notes(hyperparameters['scale_type'], hyperparameters['key_signature'])
+    harmonic_notes = [x % 12 for x in harmonic_notes[:-1]]
+    harmonic_notes = [x - 12 for x in harmonic_notes] + harmonic_notes + [x + 12 for x in harmonic_notes]
     for generation in range(generations):
         parents = population[:population_size]
         children = crossover(parents, crossover_rate)
-        children = mutate(children, mutation_rate, hyperparameters['scale_type'])
+        children = mutate(children, mutation_rate, harmonic_notes)
         population = parents + children
         population, fitness_scores = sort_by_fitness(population, original_melody, hyperparameters)
         if hyperparameters['verbose']:
@@ -101,22 +103,22 @@ def genetic_algorithm(original_melody, population_size, generations, crossover_r
 
 if __name__ == "__main__":
 
-    # track_name = 'twinkle-twinkle-little-star'
-    track_name = 'Bach_Minuet_in_G'
+    track_name = 'twinkle-twinkle-little-star'
+    # track_name = 'Bach_Minuet_in_G'
     # track_name = 'Sweet'
 
     theme_midi_file = f'Themes/{track_name}.mid'
-    output_folder = f'ablation/{track_name}'
+    output_folder = f'ablation_2/{track_name}'
     original_midi_file = f'{output_folder}/original.mid'
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-    # original_melody, key_signature, key_type = load_midi(theme_midi_file)
-    original_melody, key_signature, key_type = load_midi_v2(theme_midi_file)
+    original_melody, key_signature, key_type = load_midi(theme_midi_file)
+    # original_melody, key_signature, key_type = load_midi_v2(theme_midi_file)
     create_midi_file(original_melody, original_midi_file, bpm=120)
 
     # Set genetic algorithm parameters
-    hyperparameters = {'w_harmony': 1, 'w_similarity': 1, 'w_tempo': 0,
+    hyperparameters = {'w_harmony': 1, 'w_similarity': 1, 'w_tempo': 1,
                        'scale_type': key_type, 'key_signature': key_signature,
                        'print_metrics': False, 'verbose': True}
     print(hyperparameters)
