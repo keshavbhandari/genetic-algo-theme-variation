@@ -22,6 +22,34 @@ def load_midi(file_path):
     return melody
 
 
+def load_midi_v2(file_path):
+    # file_path = "Themes/Twinkle-Little-Star (Long Version).mid"
+    midi_stream = converter.parse(file_path)
+    key_signature = midi_stream.analyze('key').tonicPitchNameWithCase
+    key_type = midi_stream.analyze('key').type
+    midi_stream = midi_stream.parts[0]
+    melody = []
+    for element in midi_stream.recurse():
+        if isinstance(element, note.Note):
+            melody.append([element.pitch.midi, element.beat, element.offset, element.duration.quarterLength,
+                            element.volume.velocity])
+        elif isinstance(element, chord.Chord):
+            # Extract only the leading (higher pitch) note from the chord
+            leading_note = max(element.pitches, key=lambda x: x.midi)
+            melody.append([leading_note.midi, element.beat, element.offset, element.duration.quarterLength,
+                            element.volume.velocity])
+    
+    trimmed_melody = []
+    bar_counter = 0
+    for element in melody:
+        if element[1] == 1:
+            bar_counter += 1
+        if bar_counter <=12:
+            trimmed_melody.append(element)
+
+    return trimmed_melody, key_signature, key_type
+
+
 def create_midi_file(melody, output_file_path, bpm=120):
     # Create a stream for the melody
     # melody_stream = stream.Score()
